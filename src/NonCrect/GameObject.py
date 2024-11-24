@@ -22,14 +22,6 @@ from .Definition import OptionsDefinition, ComponentType
 """ GameObject skeleton """
 
 
-component_types: tuple[type[ComponentSkeleton], ...] = (
-    NoneType,
-    ColliderSkeleton,
-    TextureSkeleton,
-    Transform,
-)
-
-
 class GameObject(ComponentSkeleton):
     """ GameObject base """
 
@@ -87,3 +79,12 @@ class GameObject(ComponentSkeleton):
         return
 
     ...
+
+
+component_types: tuple[type[ComponentSkeleton], ...] = (
+    NoneType,
+    ColliderSkeleton,
+    Transform,
+    GameObject,
+    TextureSkeleton,
+)
