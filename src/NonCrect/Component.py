@@ -14,6 +14,7 @@ from NonCrect.ComponentSkeleton import ComponentSkeleton
 from NonCrect.Definition import ComponentType
 from NonCrect.Type import Position, Force
 
+
 """ Components """
 
 
@@ -24,8 +25,8 @@ class NoneType(ComponentSkeleton):
             ComponentType.NoneType
         )
         return
-
-    def __process__(self, *args, game_object, **kwargs): ...
+    def __setup__(self, game_objects, parent_object, **kwargs): ...
+    def __update__(self, game_objects, parent_object, **kwargs): ...
 
     ...
 
@@ -69,7 +70,9 @@ class Transform(ComponentSkeleton):
             (self.position, self.rotation, self.scale, self.mass, self.force)
         )
 
-    def __process__(self, *args, game_object, **kwargs):
+    def __setup__(self, game_objects, parent_object, **kwargs): ...
+
+    def __update__(self, game_objects, parent_object, **kwargs):
         """ Update position and rotation """
         self.position += self.force
         return
@@ -80,10 +83,38 @@ class Transform(ComponentSkeleton):
 class ColliderSkeleton(ComponentSkeleton, ABC):
     """ Collider component """
 
+    """ values """
+    __parent_object = None
+
+    """ properties """
+    @property
+    def transform(self) -> Transform:
+        return self.__parent_object.components.Transform
+    @transform.setter
+    def transform(self, transform: Transform):
+        self.__parent_object.components.transform = transform
+        return
+
+    """ processes """
+
+    # instance
     def __init__(self):
         super(ColliderSkeleton, self).__init__(
             ComponentType.Collider
         )
+        self.__parent_object = None
+        return
+
+    @abstractmethod
+    def __setup__(self, game_objects, parent_object, **kwargs): ...
+
+    @abstractmethod
+    def __collider__(self, game_objects, parent_objects, **kwargs): ...
+
+    def __update__(self, game_objects, parent_objects, **kwargs):
+        """ Check collision """
+        self.__parent_object = parent_objects
+        self.__collider__(game_objects, parent_objects, **kwargs)
         return
 
     ...
@@ -93,15 +124,15 @@ class TextureSkeleton(ComponentSkeleton, ABC):
     """ Texture component """
 
     """ values """
-    __game_object = None
+    __parent_objects = None
 
     """ properties """
     @property
     def transform(self) -> Transform:
-        return self.__game_object.components.Transform
+        return self.__parent_objects.components.Transform
     @transform.setter
     def transform(self, transform: Transform):
-        self.__game_object.components.transform = transform
+        self.__parent_objects.components.transform = transform
         return
 
     """ processes """
@@ -111,14 +142,18 @@ class TextureSkeleton(ComponentSkeleton, ABC):
         super(TextureSkeleton, self).__init__(
             ComponentType.Texture
         )
+        self.__parent_objects = None
         return
 
     @abstractmethod
-    def __render__(self, *args, game_object, **kwargs): ...
+    def __setup__(self, game_objects, parent_object, **kwargs): ...
 
-    def __process__(self, *args, game_object, **kwargs):
-        self.__game_object = game_object
-        self.__render__(*args, game_object=game_object, **kwargs)
+    @abstractmethod
+    def __render__(self, game_objects, parent_object, **kwargs): ...
+
+    def __update__(self, game_objects, parent_object, **kwargs):
+        self.__parent_objects = parent_object
+        self.__render__(game_objects, parent_object, **kwargs)
         return
 
     ...
@@ -128,29 +163,29 @@ class ScriptSkeleton(ComponentSkeleton, ABC):
     """ Script component """
 
     """ values """
-    __game_object = None
+    __parent_object = None
 
     """ properties """
     @property
     def transform(self) -> Transform:
-        return self.__game_object.components.Transform
+        return self.__parent_object.components.Transform
     @transform.setter
     def transform(self, transform: Transform):
-        self.__game_object.components.transform = transform
+        self.__parent_object.components.transform = transform
         return
     @property
     def collider(self) -> ColliderSkeleton:
-        return self.__game_object.components.collider
+        return self.__parent_object.components.collider
     @collider.setter
     def collider(self, collider: ColliderSkeleton):
-        self.__game_object.components.collider = collider
+        self.__parent_object.components.collider = collider
         return
     @property
     def texture(self) -> TextureSkeleton:
-        return self.__game_object.components.texture
+        return self.__parent_object.components.texture
     @texture.setter
     def texture(self, texture: TextureSkeleton):
-        self.__game_object.components.texture = texture
+        self.__parent_object.components.texture = texture
         return
 
 
@@ -161,15 +196,18 @@ class ScriptSkeleton(ComponentSkeleton, ABC):
         super(ScriptSkeleton, self).__init__(
             ComponentType.Script
         )
-        self.__game_object = None
+        self.__parent_object = None
         return
 
     @abstractmethod
-    def __script__(self, *args, game_object, **kwargs): ...
+    def __setup__(self, game_objects, parent_object, **kwargs): ...
 
-    def __process__(self, *args, game_object, **kwargs):
-        self.__game_object = game_object
-        self.__script__(*args, game_object=game_object, **kwargs)
+    @abstractmethod
+    def __script__(self, game_objects, parent_object, **kwargs): ...
+
+    def __update__(self, game_objects, parent_object, **kwargs):
+        self.__parent_object = parent_object
+        self.__script__(game_objects, parent_object, **kwargs)
         return
 
     ...

@@ -8,7 +8,6 @@ This file contain GameObject classes for using in NonCrect.
 """ imports """
 
 
-from copy import deepcopy
 from .DataClass import Components
 from .ComponentSkeleton import ComponentSkeleton
 from .Component import (
@@ -61,11 +60,13 @@ class GameObject(ComponentSkeleton):
         self.__components.append(_component)
         return
 
-    def __update__(self, *args, **kwargs) -> set[OptionsDefinition]:
+    def __setup__(self, game_objects, parent_object = None, **kwargs): ...
+
+    def __update__(self, game_objects, parent_object = None, **kwargs) -> set[OptionsDefinition]:
         """ Update GameObject components """
         options: set[OptionsDefinition | None] = set(
-            component.__process__(
-                *args, game_object=self, **kwargs
+            component.__update__(
+                game_objects, self, **kwargs
             )
             for component in sorted(
                 self.__components.values(),
@@ -73,11 +74,6 @@ class GameObject(ComponentSkeleton):
             )
         )
         return options
-
-    def __process__(self, *args, game_object, **kwargs):
-        """ Update GameObject components """
-        self.__update__(*args, **kwargs)
-        return
 
     ...
 

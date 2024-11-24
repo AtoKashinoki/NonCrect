@@ -58,5 +58,4 @@ class Components(DataClass):
 
     def values(self) -> ValuesView[ComponentSkeleton]:
         return super().values()
-
     ...
