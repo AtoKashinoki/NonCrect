@@ -19,6 +19,7 @@ from .Component import (
 )
 from .Definition import OptionsDefinition, ComponentType
 
+
 """ GameObject skeleton """
 
 
