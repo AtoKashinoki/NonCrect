@@ -92,6 +92,21 @@ class ColliderSkeleton(ComponentSkeleton, ABC):
 class TextureSkeleton(ComponentSkeleton, ABC):
     """ Texture component """
 
+    """ values """
+    __game_object = None
+
+    """ properties """
+    @property
+    def transform(self) -> Transform:
+        return self.__game_object.components.Transform
+    @transform.setter
+    def transform(self, transform: Transform):
+        self.__game_object.components.transform = transform
+        return
+
+    """ processes """
+
+    # instance
     def __init__(self):
         super(TextureSkeleton, self).__init__(
             ComponentType.Texture
@@ -102,6 +117,7 @@ class TextureSkeleton(ComponentSkeleton, ABC):
     def __render__(self, *args, game_object, **kwargs): ...
 
     def __process__(self, *args, game_object, **kwargs):
+        self.__game_object = game_object
         self.__render__(*args, game_object=game_object, **kwargs)
         return
 

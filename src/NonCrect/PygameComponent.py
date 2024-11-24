@@ -28,10 +28,22 @@ class Texture(TextureSkeleton):
 
     """ processes """
 
-    def __init__(self):
+    def __init__(self, _surface: pygame.Surface = None):
         """ Initialize texture component """
         super().__init__()
+
+        if _surface is not None:
+            self.__surface__ = _surface
+            ...
+
         return
 
-    def __render__(self, *args, game_object, **kwargs):
+    def __render__(
+            self,
+            *args,
+            game_object,
+            **kwargs,
+    ):
+        master: pygame.Surface = kwargs["master"]
+        master.blit(self.__surface__, self.transform.position.data)
         return
