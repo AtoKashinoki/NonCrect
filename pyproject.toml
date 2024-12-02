@@ -14,6 +14,7 @@ license = {file="LICENSE"}
 requires-python = ">=3.10"
 dependencies = [
    "CodingTools@git+https://github.com/AtoKashinoki/CodingTools2.git",
+   "pygame",
 ]
 
 authors = [
