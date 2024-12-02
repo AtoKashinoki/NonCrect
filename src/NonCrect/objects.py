@@ -81,9 +81,12 @@ class Charactor(Object):
     dash_cool = None
     afterimages = None
     afterimage_cool = None
-    death = None
+    death_f = None
     spawn = None
+    spawn_point = None
     control = None
+
+    def get_spawn_point(self): return self.spawn_point
 
     def __init__(self, pos_unit):
         super().__init__(
@@ -94,12 +97,28 @@ class Charactor(Object):
         self.dash_cool = 0
         self.afterimages = []
         self.afterimage_cool = 0
-        self.death = False
+        self.death_f = False
         self.spawn = True
+        self.spawn_point = pos_unit
         self.control = True
         return
 
     def __start__(self, camera): ...
+
+    def death(self):
+        [
+            self.afterimages.append(Afterimage(
+                [
+                    p + randrange(s - 5)
+                    for p, s in zip(self.position, self.size)
+                ],
+                (5, 5),
+                (randrange(14) + 1) / 10
+            ))
+            for _ in range(60)
+        ]
+        self.death_f = True
+        return
 
     def __update__(self, key_pressed, delta_t, objects, camera):
 
@@ -109,7 +128,7 @@ class Charactor(Object):
             if afterimage.__update__(key_pressed, delta_t, objects, camera)
         ]
 
-        if self.death:
+        if self.death_f:
             if len(self.afterimages) == 0: self.kill()
             return
 
@@ -161,12 +180,16 @@ class Charactor(Object):
                 self.dash_cool = 30
                 ...
 
+            if key_pressed[pg.K_r]:
+                self.death()
+                ...
+
             ...
 
         lands = [
             obj
             for obj in objects
-            if isinstance(obj, Land) or isinstance(obj, KillZone)
+            if isinstance(obj, Land)
         ]
 
         for i in range(2):
@@ -176,19 +199,11 @@ class Charactor(Object):
                 self.rect[:2] = self.position
                 for land in lands:
                     if self.rect.colliderect(land.rect):
+                        if isinstance(land, CheckPoint):
+                            self.spawn_point = land.pos_unit
+                            continue
                         if isinstance(land, KillZone):
-                            [
-                                self.afterimages.append(Afterimage(
-                                    [
-                                        p + randrange(s - 5)
-                                        for p, s in zip(self.position, self.size)
-                                    ],
-                                    (5, 5),
-                                    (randrange(14)+1)/10
-                                ))
-                                for _ in range(60)
-                            ]
-                            self.death = True
+                            self.death()
                         if self.position[i] < land.position[i]:
                             self.position[i] = land.position[i] - self.size[i]
                             if i == 1: self.is_land = True
@@ -227,7 +242,7 @@ class Charactor(Object):
 
     def __render__(self, master: Surface):
         [afterimage.__render__(master) for afterimage in self.afterimages]
-        if not self.death and not self.spawn:
+        if not self.death_f and not self.spawn:
             super().__render__(master)
         return
 
@@ -390,6 +405,8 @@ class Texts(Object):
 
     def __start__(self, camera):
         self.add_text("Enter SPACE", (400, 250), 100)
+        self.add_text("Enter SPACE", (2800, 250), 100)
+        self.add_text("Enter SPACE", (1800, 250), 100)
         self.Spawn = copy(self.texts)
         self.texts = []
         self.add_text("Move [<-] and [->] key", (250, 250), 100)
@@ -397,6 +414,9 @@ class Texts(Object):
         self.add_text("Jamp!!", (1040, 350), 100)
         self.add_text("[Left Shift]", (1430, 250), 100)
         self.add_text("Dash!!!", (1490, 350), 100)
+        self.add_text("\Check point/", (1800, 350), 100)
+        self.add_text("Enter R", (2900, 250), 100)
+        self.add_text("Restart", (2900, 350), 100)
         self.Tutorial = copy(self.texts)
         self.texts = []
 
@@ -425,5 +445,65 @@ class Texts(Object):
     def __render__(self, master):
         [text.__render__(master) for text in self.texts]
         return
+
+    ...
+
+
+class CheckPoint(Land):
+
+    pos_unit = None
+    check = None
+    alpha = None
+
+    def __init__(self, land_unit):
+        super().__init__(land_unit)
+        self.alpha = 127
+        self.__surface__.fill("Black")
+        self.__surface__.set_alpha(self.alpha)
+        self.pos_unit = land_unit[:2]
+        self.check = False
+        return
+
+    def __update__(self, key_pressed, delta_t, objects, camera):
+        chara_object = [obj for obj in objects if isinstance(obj, Charactor)]
+        for chara in chara_object:
+            if self.rect.colliderect(chara):
+                self.check = True
+                ...
+            continue
+        if not self.check: return
+
+        self.alpha -= 3
+        self.__surface__ = pg.transform.rotozoom(self.__surface__, 0, 1.03)
+        rect = self.__surface__.get_rect()
+        self.position = [
+            p-(rs-s)/2
+            for p, s, rs in zip(self.position, self.size, rect[2:])
+        ]
+        self.size = rect[2:]
+        self.__surface__.set_alpha(self.alpha)
+
+        if self.alpha < 0: self.killing = True
+        return
+
+    def __render__(self, master):
+        Object.__render__(self, master)
+        return
+
+    ...
+
+
+class BackRect(Object):
+
+    def __init__(self, rect_unit):
+        super().__init__(
+            [rect_unit[0] * 50, (rect_unit[1] - 12) * -50],
+            [s * 50 for s in rect_unit[2:]],
+        )
+        self.__surface__.fill((63, 63, 63))
+        return
+
+    def __start__(self, camera): ...
+    def __update__(self, key_pressed, delta_t, objects, camera): ...
 
     ...

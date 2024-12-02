@@ -3,13 +3,12 @@
 from time import time
 import pygame as pg
 from .objects import (
-    Object,
     Charactor,
     Land,
     KillZone,
     BackGround,
     Unseen,
-    Texts,
+    Texts, CheckPoint, BackRect,
 )
 from .Camera import Camera
 
@@ -30,13 +29,46 @@ lands_units = [
 ] + [
     (61, 1, 9, 1),
 ] + [
-    (73+(i+2)*4, 4-abs(i), 1, 1)
+    (73+(i+2)*5, 4-abs(i), 2, 1)
     for i in range(-2, 3)
 ] + [
-    (93, 1, 12, 1)
+    (98, 1, 15, 1),
+] + [
+    (
+        111 if i%6==0 else
+        113 if i%6==1 else
+        115 if i%6==2 else
+        116 if i%6==3 else
+        114 if i%6==4 else
+        112,
+        i,
+        1, 1
+    )
+    for i in range(22)
+] + [
+    (112, 24, 4, 1),
+    (111, 27, 1, 3),
+    (116, 27, 1, 3),
+    (113, 26, 2, 1),
+    (112, 28, 4, 1),
+] + [
+    (119+i*3, 21, 1, 1)
+    for i in range(5)
 ]
 
-spawn_point = (12, 5)
+
+back_rect_units = [
+    (114-i%2, 2+(i*3), 1, 3)
+    for i in range(8)
+]
+
+spawn_point = (105, 5)
+
+check_point_units = [
+    (43, 3, 1, 1),
+    (65, 3, 1, 1),
+    (105, 3, 1, 1),
+]
 
 kill_units = [
     (18*i, -1, 18, 1)
@@ -54,6 +86,16 @@ lands = [
     for rand_unit in set(lands_units)
 ]
 
+back_rects = [
+    BackRect(back_rect_unit)
+    for back_rect_unit in back_rect_units
+]
+
+check_point = [
+    CheckPoint(check_point_unit)
+    for check_point_unit in check_point_units
+]
+
 kills = [
     KillZone(kill_unit)
     for kill_unit in set(kill_units)
@@ -67,7 +109,9 @@ class Engine:
     def __init__(self, fps = 60):
         self.fps = fps
         self.size = (900, 600)
-        self.objects = [BackGround(), Texts()] + unseen + lands + kills
+        self.objects = [BackGround(), Texts()] + \
+                       unseen + lands + kills + back_rects + \
+                       check_point
         return
 
     def __start__(self, camera):
@@ -78,6 +122,7 @@ class Engine:
         return
 
     def __update__(self, events: list[pg.event.Event], delta_t, camera) -> int | None:
+        global spawn_point
         for event in events:
             if event.type == pg.QUIT:
                 return -1
@@ -86,6 +131,8 @@ class Engine:
                 ...
             ...
         [obj.__update__(pg.key.get_pressed(), delta_t, self.objects, camera) for obj in self.objects]
+        chars = [obj for obj in self.objects if isinstance(obj, Charactor)]
+        if not len(chars) == 0: spawn_point = chars[0].spawn_point
         self.objects = [obj for obj in self.objects if not obj.killing]
         if not Charactor in map(type, self.objects):
             charactor = Charactor(spawn_point)
