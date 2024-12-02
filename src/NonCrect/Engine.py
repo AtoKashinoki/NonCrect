@@ -2,26 +2,42 @@
 
 from time import time
 import pygame as pg
-from .objects import Object, Charactor, Land, KillZone, BackGround
+from .objects import (
+    Object,
+    Charactor,
+    Land,
+    KillZone,
+    BackGround,
+    Unseen,
+    Texts,
+)
 from .Camera import Camera
 
 
-lands_units = [
+unseen_units = [
     (-1, 30, 1, 32),
-] + [
-    (0, 1, 24, 1),
+]
+
+lands_units = [
+    (-18, 1, 24+18, 1),
     (10, 2, 5, 1),
     (11, 3, 3, 1),
-    (25, 1, 5, 1)
+    (25, 1, 8, 1),
+    (36, 1, 50, 1),
 ]
 
 spawn_point = (12, 5)
 
 kill_units = [
     (18*i, -1, 18, 1)
-    for i in range(5)
+    for i in range(10)
 ]
 
+
+unseen = [
+    Unseen(unit)
+    for unit in unseen_units
+]
 
 lands = [
     Land(rand_unit)
@@ -36,12 +52,12 @@ kills = [
 class Engine:
     fps = None
     size = None
-    objects: list[Object] = None
+    objects: list = None
 
     def __init__(self, fps = 60):
         self.fps = fps
         self.size = (900, 600)
-        self.objects = [BackGround()] + lands + kills
+        self.objects = [BackGround(), Texts()] + unseen + lands + kills
         return
 
     def __start__(self, camera):

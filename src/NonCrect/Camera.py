@@ -9,6 +9,7 @@ class Camera(Object):
     __master = None
 
     target = None
+    limiting = None
 
     @property
     def master(self): return self.__master
@@ -17,6 +18,7 @@ class Camera(Object):
         self.__master = master
         super().__init__((0, 0), master.get_size())
         self.target = NoneType((0, 0), master.get_size())
+        self.limiting = [False, True]
         return
 
     def set_target(self, target: Object):
@@ -30,11 +32,16 @@ class Camera(Object):
             int(p+(t-p)/12)
             for t, p in zip(self.target.center, self.center)
         ]
-        if self.position[1]+self.size[1] > self.size[1]:
-            self.position[1] = 0
+
+        if self.limiting[1]:
+            if self.position[1]+self.size[1] > self.size[1]:
+                self.position[1] = 0
+                ...
+        if self.limiting[0]:
+            if self.position[0] < 0:
+                self.position[0] = 0
+                ...
             ...
-        if self.position[0] < 0:
-            self.position[0] = 0
 
         self.rect[:2] = self.position
         return

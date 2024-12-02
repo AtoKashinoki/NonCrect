@@ -1,6 +1,6 @@
 
 from abc import ABC, abstractmethod
-from copy import deepcopy
+from copy import deepcopy, copy
 from random import randrange
 from pygame import Surface, Rect
 import pygame as pg
@@ -83,7 +83,7 @@ class Charactor(Object):
     afterimage_cool = None
     death = None
     spawn = None
-    spawn_c = None
+    control = None
 
     def __init__(self, pos_unit):
         super().__init__(
@@ -96,7 +96,7 @@ class Charactor(Object):
         self.afterimage_cool = 0
         self.death = False
         self.spawn = True
-        self.spawn_c = 60
+        self.control = True
         return
 
     def __start__(self, camera): ...
@@ -131,34 +131,36 @@ class Charactor(Object):
             ...
 
         if self.spawn:
-            self.spawn_c -= 1
-            if self.spawn_c < 0:
-                self.spawn_c = 60
+            if self.control and key_pressed[pg.K_SPACE]:
                 self.spawn = False
                 ...
             return
 
-        self.movement[0] = 0
-        if key_pressed[pg.K_LEFT]:
-            self.movement[0] -= 240*delta_t
-            ...
-        if key_pressed[pg.K_RIGHT]:
-            self.movement[0] += 240*delta_t
-            ...
-        self.movement[1] += 35*delta_t
-
-        if self.is_land:
-            if key_pressed[pg.K_UP]:
-                self.movement[1] = -480*delta_t
-                self.is_land = False
-                ...
-            ...
-
         dash = False
-        self.dash_cool -= 1
-        if key_pressed[pg.K_LSHIFT] and self.dash_cool < 0 and not self.movement[0] == 0:
-            dash = True
-            self.dash_cool = 30
+        self.movement[1] += 35 * delta_t
+
+        if self.control:
+            self.movement[0] = 0
+            if key_pressed[pg.K_LEFT]:
+                self.movement[0] -= 240*delta_t
+                ...
+            if key_pressed[pg.K_RIGHT]:
+                self.movement[0] += 240*delta_t
+                ...
+
+            if self.is_land:
+                if key_pressed[pg.K_UP]:
+                    self.movement[1] = -480*delta_t
+                    self.is_land = False
+                    ...
+                ...
+
+            self.dash_cool -= 1
+            if key_pressed[pg.K_LSHIFT] and self.dash_cool < 0 and not self.movement[0] == 0:
+                dash = True
+                self.dash_cool = 30
+                ...
+
             ...
 
         lands = [
@@ -268,6 +270,13 @@ class KillZone(Land):
     ...
 
 
+class Unseen(Land):
+    def __init__(self, land_unit):
+        super().__init__(land_unit)
+        self.__surface__.set_alpha(0)
+        return
+
+
 class BackGroundRect(Object):
     alpha = None
     rm_alpha = None
@@ -277,16 +286,14 @@ class BackGroundRect(Object):
     base_position = None
 
     def __init__(self, camera):
+        depth = 2
         pos = [
-            camera.position[0]-200+randrange(camera.size[0]+200),
+            camera.position[0]/depth-400+randrange(camera.size[0]+400),
             600
         ]
         side = randrange(50, 200)
         size = [side for _ in range(2)]
-        super().__init__(
-            pos, size,
-            2
-        )
+        super().__init__(pos, size,depth)
         self.base_position = pos
         self.alpha = randrange(120, 240)
         self.__surface__.fill((0, 0, 0, 0))
@@ -348,6 +355,75 @@ class BackGround(Object):
 
     def __render__(self, master: Surface):
         [obj.__render__(master) for obj in self.objects]
+        return
+
+    ...
+
+
+class Text(Object):
+
+    def __init__(self, text, position, size, font=None):
+        super().__init__(position, (0, 0), 1.1)
+        font = pg.font.SysFont(None, size)
+        self.__surface__ = font.render(text, True, (0, 0, 0))
+        return
+
+    def __start__(self, camera): ...
+    def __update__(self, key_pressed, delta_t, objects, camera): ...
+
+    ...
+
+
+class Texts(Object):
+
+    texts = None
+    charactor = None
+
+    Spawn = list
+    Tutorial = list
+
+    def __init__(self):
+        super().__init__((0, 0), (0, 0))
+        self.texts = []
+        self.charactor = None
+        return
+
+    def __start__(self, camera):
+        self.add_text("Enter SPACE", (400, 250), 100)
+        self.Spawn = copy(self.texts)
+        self.texts = []
+        self.add_text("Move [<-] and [->] key", (250, 250), 100)
+        self.add_text("[^]", (1110, 250), 100)
+        self.add_text("Jamp!!", (1040, 350), 100)
+        self.add_text("[Left Shift]", (1430, 250), 100)
+        self.add_text("Dash!!!", (1490, 350), 100)
+        self.Tutorial = copy(self.texts)
+        self.texts = []
+
+        self.texts = self.Spawn
+        return
+
+    def __update__(self, key_pressed, delta_t, objects, camera):
+        if not self.charactor in objects:
+            char_list = [
+                obj for obj in objects if isinstance(obj, Charactor)
+            ]
+            if len(char_list) > 0:
+                self.charactor = char_list[0]
+                ...
+            self.texts = self.Spawn
+            ...
+        if key_pressed[pg.K_SPACE]:
+            self.texts = self.Tutorial
+            ...
+        return
+
+    def add_text(self, text, position, size, font=None):
+        self.texts.append(Text(text, position, size, font))
+        return
+
+    def __render__(self, master):
+        [text.__render__(master) for text in self.texts]
         return
 
     ...
