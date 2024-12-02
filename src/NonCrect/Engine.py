@@ -7,6 +7,8 @@ from .Camera import Camera
 
 
 lands_units = [
+    (-1, 30, 1, 32),
+] + [
     (0, 1, 24, 1),
     (10, 2, 5, 1),
     (11, 3, 3, 1),
