@@ -62,7 +62,7 @@ back_rect_units = [
     for i in range(8)
 ]
 
-spawn_point = (105, 5)
+spawn_point = (12, 5)
 
 check_point_units = [
     (43, 3, 1, 1),
