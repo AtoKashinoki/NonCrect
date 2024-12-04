@@ -57,12 +57,14 @@ class NoneType(Object):
 class Afterimage(Object):
 
     alpha = None
+    rand = None
 
     def __init__(self, position, size, time):
         super().__init__(position, size)
         self.__surface__.fill((0, 0, 0, 192))
         self.alpha = 192
         self.rm_alpha = self.alpha/(60*time)
+        self.rand = randrange(10, 20)/10
         return
 
     def __start__(self, camera): ...
@@ -72,7 +74,11 @@ class Afterimage(Object):
         if self.alpha <= 0:
             return False
         return True
+    def __up__(self):
+        self.position[1] -= self.rand
+        return
 
+    ...
 
 
 class Charactor(Object):
@@ -85,6 +91,7 @@ class Charactor(Object):
     spawn = None
     spawn_point = None
     control = None
+    goal = None
 
     def get_spawn_point(self): return self.spawn_point
 
@@ -100,7 +107,8 @@ class Charactor(Object):
         self.death_f = False
         self.spawn = True
         self.spawn_point = pos_unit
-        self.control = True
+        self.control = False
+        self.goal = False
         return
 
     def __start__(self, camera): ...
@@ -127,6 +135,10 @@ class Charactor(Object):
             for afterimage in self.afterimages
             if afterimage.__update__(key_pressed, delta_t, objects, camera)
         ]
+
+        if self.goal:
+            [afterimage.__up__() for afterimage in self.afterimages]
+            ...
 
         if self.death_f:
             if len(self.afterimages) == 0: self.kill()
@@ -199,6 +211,10 @@ class Charactor(Object):
                 self.rect[:2] = self.position
                 for land in lands:
                     if self.rect.colliderect(land.rect):
+                        if isinstance(land, Goal):
+                            self.goal = True
+                            self.death()
+                            continue
                         if isinstance(land, CheckPoint):
                             self.spawn_point = land.pos_unit
                             continue
@@ -344,7 +360,7 @@ class BackGroundRect(Object):
 class BackGround(Object):
 
     delta_ts = None
-    gen_t = 0.1
+    gen_t = 0.2
     objects = None
 
     def __init__(self):
@@ -359,8 +375,9 @@ class BackGround(Object):
         self.delta_ts += delta_t
         if self.delta_ts > self.gen_t:
             self.objects.append(BackGroundRect(camera))
-            self.delta_ts = 0
+            self.delta_ts -= self.gen_t
             ...
+
         self.objects = [
             obj
             for obj in self.objects
@@ -417,6 +434,7 @@ class Texts(Object):
         self.add_text("\Check point/", (1800, 350), 100)
         self.add_text("Enter R", (2900, 250), 100)
         self.add_text("Restart", (2900, 350), 100)
+        self.add_text("Goal->", (6000, -450), 100)
         self.Tutorial = copy(self.texts)
         self.texts = []
 
@@ -433,7 +451,7 @@ class Texts(Object):
                 ...
             self.texts = self.Spawn
             ...
-        if key_pressed[pg.K_SPACE]:
+        if key_pressed[pg.K_SPACE] and self.charactor.control:
             self.texts = self.Tutorial
             ...
         return
@@ -507,3 +525,97 @@ class BackRect(Object):
     def __update__(self, key_pressed, delta_t, objects, camera): ...
 
     ...
+
+
+class GoalRect(Object):
+
+    base_position = None
+    __base_surface__ = None
+    angle = None
+    roto = None
+    alpha = None
+
+    def __init__(self, rect_unit, roto):
+        super().__init__(
+            [rect_unit[0] * 50, (rect_unit[1] - 12) * -50],
+            [s * 50 for s in rect_unit[2:]]
+        )
+        self.base_position = deepcopy(self.position)
+        self.__base_surface__ = pg.Surface(self.size)
+        self.__base_surface__.fill("Gray")
+        self.alpha = 127
+        self.angle = 0
+        self.roto = roto
+        return
+
+    def __start__(self, camera): ...
+    def __update__(self, key_pressed, delta_t, objects, camera):
+        self.__surface__ = pg.transform.rotozoom(
+            self.__base_surface__, self.angle, 1
+        )
+        self.__surface__.set_colorkey("Black")
+        rect = self.__surface__.get_rect()
+        self.position = [
+            bp + ss//2 - rc
+            for bp, ss, rc in zip(self.base_position, self.size, rect.center)
+        ]
+        self.__surface__.set_alpha(self.alpha)
+        self.angle += self.roto
+        return True
+
+    ...
+
+
+class Goal(Land):
+
+    objects = None
+
+    def __init__(self, land_unit):
+        self_land_unit = list(land_unit)
+        self_land_unit[2:] = [lu*0.50 for lu in land_unit[2:]]
+        self_land_unit[:2] = [
+            lp+ls/a
+            for lp, ls, a in zip(
+                self_land_unit[:2], self_land_unit[2:], (2, -2)
+            )
+        ]
+        super().__init__(self_land_unit)
+        self.objects = [GoalRect(land_unit, i) for i in range(-1, 2, 2)]
+        return
+
+    def __start__(self, camera): ...
+    def __update__(self, key_pressed, delta_t, objects, camera):
+        self.objects = [
+            obj
+            for obj in self.objects
+            if obj.__update__(key_pressed, delta_t, objects, camera)
+        ]
+        return
+    def __render__(self, master):
+        [obj.__render__(master) for obj in self.objects]
+        return
+
+    ...
+
+
+class StartCameraWork(NoneType):
+
+    def __init__(self, position):
+        super().__init__(position, (0, 0))
+        return
+
+    def __update__(self, key_pressed, delta_t, objects, camera):
+        chars = [obj for obj in objects if isinstance(obj, Charactor)]
+        if len(chars) == 0: return
+        char = chars[0]
+        self.movement = [
+            3*(cp-sp)/abs(cp-sp) if 3 < abs(cp-sp) else
+            (cp-sp)/abs(cp-sp) if 0 < abs(cp-sp) else
+            0
+            for sp, cp in zip(self.position, char.position)
+        ]
+        self.position = [p+m for p, m in zip(self.position, self.movement)]
+        if sum(map(int, (map(abs, self.movement)))) == 0:
+            self.killing = True
+            ...
+        return

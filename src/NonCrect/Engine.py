@@ -9,6 +9,7 @@ from .objects import (
     BackGround,
     Unseen,
     Texts, CheckPoint, BackRect,
+    Goal, StartCameraWork
 )
 from .Camera import Camera
 
@@ -18,7 +19,7 @@ unseen_units = [
 ]
 
 lands_units = [
-    (-18, 1, 24+18, 1),
+    (0, 1, 24, 1),
     (10, 2, 5, 1),
     (11, 3, 3, 1),
     (25, 1, 8, 1),
@@ -46,12 +47,6 @@ lands_units = [
     )
     for i in range(22)
 ] + [
-    (112, 24, 4, 1),
-    (111, 27, 1, 3),
-    (116, 27, 1, 3),
-    (113, 26, 2, 1),
-    (112, 28, 4, 1),
-] + [
     (119+i*3, 21, 1, 1)
     for i in range(5)
 ]
@@ -59,7 +54,7 @@ lands_units = [
 
 back_rect_units = [
     (114-i%2, 2+(i*3), 1, 3)
-    for i in range(8)
+    for i in range(9)
 ]
 
 spawn_point = (12, 5)
@@ -68,6 +63,10 @@ check_point_units = [
     (43, 3, 1, 1),
     (65, 3, 1, 1),
     (105, 3, 1, 1),
+]
+
+goal_units = [
+    (136, 22, 1, 1),
 ]
 
 kill_units = [
@@ -96,6 +95,11 @@ check_point = [
     for check_point_unit in check_point_units
 ]
 
+goals = [
+    Goal(unit)
+    for unit in goal_units
+]
+
 kills = [
     KillZone(kill_unit)
     for kill_unit in set(kill_units)
@@ -105,13 +109,19 @@ class Engine:
     fps = None
     size = None
     objects: list = None
+    charactor = None
 
     def __init__(self, fps = 60):
         self.fps = fps
         self.size = (900, 600)
         self.objects = [BackGround(), Texts()] + \
                        unseen + lands + kills + back_rects + \
-                       check_point
+                       check_point + goals + [StartCameraWork((-550, 600))]
+        self.spawn_point = spawn_point
+        self.goal = False
+        self.c = 0
+        self.start = True
+        self.charactor = None
         return
 
     def __start__(self, camera):
@@ -122,7 +132,6 @@ class Engine:
         return
 
     def __update__(self, events: list[pg.event.Event], delta_t, camera) -> int | None:
-        global spawn_point
         for event in events:
             if event.type == pg.QUIT:
                 return -1
@@ -130,14 +139,30 @@ class Engine:
                 self.__key_down__(event.key)
                 ...
             ...
+
         [obj.__update__(pg.key.get_pressed(), delta_t, self.objects, camera) for obj in self.objects]
         chars = [obj for obj in self.objects if isinstance(obj, Charactor)]
-        if not len(chars) == 0: spawn_point = chars[0].spawn_point
+        if not len(chars) == 0:
+            self.spawn_point = chars[0].spawn_point
+            self.goal = chars[0].goal
+            ...
+        else:
+            if self.goal: self.c += 1
+            if self.c > 180:
+                return -1
+            ...
         self.objects = [obj for obj in self.objects if not obj.killing]
-        if not Charactor in map(type, self.objects):
-            charactor = Charactor(spawn_point)
-            self.objects.append(charactor)
-            camera.set_target(charactor)
+        if self.start and StartCameraWork not in map(type, self.objects):
+            self.start = False
+            ...
+        if not Charactor in map(type, self.objects) and not self.goal:
+            self.charactor = Charactor(self.spawn_point)
+            self.objects.append(self.charactor)
+            ...
+        if not self.start:
+            camera.set_target(self.charactor)
+            camera.limiting[0] = True
+            self.charactor.control = True
             ...
 
         return
@@ -154,8 +179,8 @@ class Engine:
         one_ft = 1/self.fps
         pre_ft = time()
 
-        camera = Camera(pg.display.set_mode(self.size))
-        camera.set_target(self.objects[0])
+        camera = Camera(pg.display.set_mode(self.size), (-1000, 0))
+        camera.set_target(self.objects[-1])
 
         self.__start__(camera)
 
@@ -168,6 +193,7 @@ class Engine:
             pre_ft = now_t
 
             self.__render__(camera)
+
             op = self.__update__(pg.event.get(), one_ft, camera)
 
             if op is not None:

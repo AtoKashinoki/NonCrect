@@ -14,9 +14,9 @@ class Camera(Object):
     @property
     def master(self): return self.__master
 
-    def __init__(self, master: pg.Surface):
+    def __init__(self, master: pg.Surface, pos):
         self.__master = master
-        super().__init__((0, 0), master.get_size())
+        super().__init__(pos, master.get_size())
         self.target = NoneType((0, 0), master.get_size())
         self.limiting = [False, True]
         return
